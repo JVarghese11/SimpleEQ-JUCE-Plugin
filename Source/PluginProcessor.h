@@ -59,6 +59,24 @@ public:
     juce::AudioProcessorValueTreeState apvts{ *this, nullptr, "Parameters", createParameterLayout()};
 
 private:
+
+    /* DSP namespace uses a lot of templates and nested namespaces*/
+    // we can create type aliases to elimnate namespace and template definitions
+    
+    //we can put 4 filters in prcoessor chain to pass a single context and process all audio automatically
+    //each filter in IIR filter has response of 12 dB/oct for low/high pass filter
+    using Filter = juce::dsp::IIR::Filter<float>; //peak filter
+
+    //define a chain pass a single context and process audio automatically
+    using CutFilter = juce::dsp::ProcessorChain<Filter, Filter, Filter, Filter>;
+
+    //use filter for mono signal path
+    using MonoChain = juce::dsp::ProcessorChain<CutFilter, Filter, CutFilter>;
+
+    //stereo processing
+    MonoChain leftChain, rightChain;
+
+    
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SimpleEQAudioProcessor)
 };
