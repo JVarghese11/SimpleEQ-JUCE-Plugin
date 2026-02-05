@@ -100,8 +100,8 @@ ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts)
     settings.peakFreq = apvts.getRawParameterValue("Peak Freq")->load();
     settings.peakGainInDecibels = apvts.getRawParameterValue("Peak Gain")->load();
     settings.peakQuality = apvts.getRawParameterValue("Peak Quality")->load();
-    settings.lowCutSlope = apvts.getRawParameterValue("LowCut Slope")->load();
-    settings.highCutSlope = apvts.getRawParameterValue("HighCut Slope")->load();
+    settings.lowCutSlope = static_cast<Slope> (apvts.getRawParameterValue("LowCut Slope")->load());
+    settings.highCutSlope = static_cast<Slope>(apvts.getRawParameterValue("HighCut Slope")->load());
 
     return settings;
 }
@@ -135,9 +135,106 @@ void SimpleEQAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlo
     *rightChain.get<ChainPositions::Peak>().coefficients = *peakCoefficients;
 
     //peak filter will make audible changes if gain parameter is not 0 
-    //changes to slider wont do anything since we're not updating filter with new coefficients
+    //changes to slider wont do anything since we're not updating filter with new coefficients (modify processBlock)
 
-   
+    auto cutCoefficients = juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod(chainSettings.lowCutFreq,
+                                                                                                    sampleRate,
+                                                                                                    2 * (chainSettings.lowCutSlope + 1));   
+    auto& leftLowCut = leftChain.get<ChainPositions::LowCut>();
+
+    leftLowCut.setBypassed<0>(true);
+    leftLowCut.setBypassed<1>(true);
+    leftLowCut.setBypassed<2>(true);
+    leftLowCut.setBypassed<3>(true);
+
+    switch (chainSettings.lowCutSlope)
+    {
+    case Slope_12: //order of 2 is 1 coeffcient obj 
+    {
+        *leftLowCut.get<0>().coefficients = *cutCoefficients[0]; //get first filter and assign to first element cut coeefficients
+        leftLowCut.setBypassed<0>(false);
+        break;
+    }
+    case Slope_24:
+    {
+        *leftLowCut.get<0>().coefficients = *cutCoefficients[0]; //get first filter and assign to first element cut coeefficients
+        leftLowCut.setBypassed<0>(false);
+        *leftLowCut.get<1>().coefficients = *cutCoefficients[1]; //get first filter and assign to first element cut coeefficients
+        leftLowCut.setBypassed<1>(false);
+        break;
+    }
+    case Slope_36:
+    {
+        *leftLowCut.get<0>().coefficients = *cutCoefficients[0]; //get first filter and assign to first element cut coeefficients
+        leftLowCut.setBypassed<0>(false);
+        *leftLowCut.get<1>().coefficients = *cutCoefficients[1]; //get first filter and assign to first element cut coeefficients
+        leftLowCut.setBypassed<1>(false);
+        *leftLowCut.get<2>().coefficients = *cutCoefficients[2]; //get first filter and assign to first element cut coeefficients
+        leftLowCut.setBypassed<2>(false);
+        break;
+    }
+    case Slope_48:
+    {
+        *leftLowCut.get<0>().coefficients = *cutCoefficients[0]; //get first filter and assign to first element cut coeefficients
+        leftLowCut.setBypassed<0>(false);
+        *leftLowCut.get<1>().coefficients = *cutCoefficients[1]; //get first filter and assign to first element cut coeefficients
+        leftLowCut.setBypassed<1>(false);
+        *leftLowCut.get<2>().coefficients = *cutCoefficients[2]; //get first filter and assign to first element cut coeefficients
+        leftLowCut.setBypassed<2>(false);
+        *leftLowCut.get<3>().coefficients = *cutCoefficients[3]; //get first filter and assign to first element cut coeefficients
+        leftLowCut.setBypassed<3>(false);
+        break;
+    }
+
+    } //switch
+
+    auto& rightLowCut = rightChain.get<ChainPositions::LowCut>();
+
+    rightLowCut.setBypassed<0>(true);
+    rightLowCut.setBypassed<1>(true);
+    rightLowCut.setBypassed<2>(true);
+    rightLowCut.setBypassed<3>(true);
+
+    switch (chainSettings.lowCutSlope)
+    {
+    case Slope_12: //order of 2 is 1 coeffcient obj 
+    {
+        *rightLowCut.get<0>().coefficients = *cutCoefficients[0]; //get first filter and assign to first element cut coeefficients
+        rightLowCut.setBypassed<0>(false);
+        break;
+    }
+    case Slope_24:
+    {
+        *rightLowCut.get<0>().coefficients = *cutCoefficients[0]; //get first filter and assign to first element cut coeefficients
+        rightLowCut.setBypassed<0>(false);
+        *rightLowCut.get<1>().coefficients = *cutCoefficients[1]; //get first filter and assign to first element cut coeefficients
+        rightLowCut.setBypassed<1>(false);
+        break;
+    }
+    case Slope_36:
+    {
+        *rightLowCut.get<0>().coefficients = *cutCoefficients[0]; //get first filter and assign to first element cut coeefficients
+        rightLowCut.setBypassed<0>(false);
+        *rightLowCut.get<1>().coefficients = *cutCoefficients[1]; //get first filter and assign to first element cut coeefficients
+        rightLowCut.setBypassed<1>(false);
+        *rightLowCut.get<2>().coefficients = *cutCoefficients[2]; //get first filter and assign to first element cut coeefficients
+        rightLowCut.setBypassed<2>(false);
+        break;
+    }
+    case Slope_48:
+    {
+        *rightLowCut.get<0>().coefficients = *cutCoefficients[0]; //get first filter and assign to first element cut coeefficients
+        rightLowCut.setBypassed<0>(false);
+        *rightLowCut.get<1>().coefficients = *cutCoefficients[1]; //get first filter and assign to first element cut coeefficients
+        rightLowCut.setBypassed<1>(false);
+        *rightLowCut.get<2>().coefficients = *cutCoefficients[2]; //get first filter and assign to first element cut coeefficients
+        rightLowCut.setBypassed<2>(false);
+        *rightLowCut.get<3>().coefficients = *cutCoefficients[3]; //get first filter and assign to first element cut coeefficients
+        rightLowCut.setBypassed<3>(false);
+        break;
+    }
+    } //switch
+
 }
 
 void SimpleEQAudioProcessor::releaseResources()
@@ -207,6 +304,105 @@ void SimpleEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     //functions needs an index to particular element in chain
     *leftChain.get<ChainPositions::Peak>().coefficients = *peakCoefficients;
     *rightChain.get<ChainPositions::Peak>().coefficients = *peakCoefficients;
+
+    auto cutCoefficients = juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod(chainSettings.lowCutFreq,
+        getSampleRate(),
+        2 * (chainSettings.lowCutSlope + 1));
+    auto& leftLowCut = leftChain.get<ChainPositions::LowCut>();
+
+    leftLowCut.setBypassed<0>(true);
+    leftLowCut.setBypassed<1>(true);
+    leftLowCut.setBypassed<2>(true);
+    leftLowCut.setBypassed<3>(true);
+
+    switch (chainSettings.lowCutSlope)
+    {
+    case Slope_12: //order of 2 is 1 coeffcient obj 
+    {
+        *leftLowCut.get<0>().coefficients = *cutCoefficients[0]; //get first filter and assign to first element cut coeefficients
+        leftLowCut.setBypassed<0>(false);
+        break;
+    }
+    case Slope_24:
+    {
+        *leftLowCut.get<0>().coefficients = *cutCoefficients[0]; //get first filter and assign to first element cut coeefficients
+        leftLowCut.setBypassed<0>(false);
+        *leftLowCut.get<1>().coefficients = *cutCoefficients[1]; //get first filter and assign to first element cut coeefficients
+        leftLowCut.setBypassed<1>(false);
+        break;
+    }
+    case Slope_36:
+    {
+        *leftLowCut.get<0>().coefficients = *cutCoefficients[0]; //get first filter and assign to first element cut coeefficients
+        leftLowCut.setBypassed<0>(false);
+        *leftLowCut.get<1>().coefficients = *cutCoefficients[1]; //get first filter and assign to first element cut coeefficients
+        leftLowCut.setBypassed<1>(false);
+        *leftLowCut.get<2>().coefficients = *cutCoefficients[2]; //get first filter and assign to first element cut coeefficients
+        leftLowCut.setBypassed<2>(false);
+        break;
+    }
+    case Slope_48:
+    {
+        *leftLowCut.get<0>().coefficients = *cutCoefficients[0]; //get first filter and assign to first element cut coeefficients
+        leftLowCut.setBypassed<0>(false);
+        *leftLowCut.get<1>().coefficients = *cutCoefficients[1]; //get first filter and assign to first element cut coeefficients
+        leftLowCut.setBypassed<1>(false);
+        *leftLowCut.get<2>().coefficients = *cutCoefficients[2]; //get first filter and assign to first element cut coeefficients
+        leftLowCut.setBypassed<2>(false);
+        *leftLowCut.get<3>().coefficients = *cutCoefficients[3]; //get first filter and assign to first element cut coeefficients
+        leftLowCut.setBypassed<3>(false);
+        break;
+    }
+
+    } //switch
+
+    auto& rightLowCut = rightChain.get<ChainPositions::LowCut>();
+
+    rightLowCut.setBypassed<0>(true);
+    rightLowCut.setBypassed<1>(true);
+    rightLowCut.setBypassed<2>(true);
+    rightLowCut.setBypassed<3>(true);
+
+    switch (chainSettings.lowCutSlope)
+    {
+    case Slope_12: //order of 2 is 1 coeffcient obj 
+    {
+        *rightLowCut.get<0>().coefficients = *cutCoefficients[0]; //get first filter and assign to first element cut coeefficients
+        rightLowCut.setBypassed<0>(false);
+        break;
+    }
+    case Slope_24:
+    {
+        *rightLowCut.get<0>().coefficients = *cutCoefficients[0]; //get first filter and assign to first element cut coeefficients
+        rightLowCut.setBypassed<0>(false);
+        *rightLowCut.get<1>().coefficients = *cutCoefficients[1]; //get first filter and assign to first element cut coeefficients
+        rightLowCut.setBypassed<1>(false);
+        break;
+    }
+    case Slope_36:
+    {
+        *rightLowCut.get<0>().coefficients = *cutCoefficients[0]; //get first filter and assign to first element cut coeefficients
+        rightLowCut.setBypassed<0>(false);
+        *rightLowCut.get<1>().coefficients = *cutCoefficients[1]; //get first filter and assign to first element cut coeefficients
+        rightLowCut.setBypassed<1>(false);
+        *rightLowCut.get<2>().coefficients = *cutCoefficients[2]; //get first filter and assign to first element cut coeefficients
+        rightLowCut.setBypassed<2>(false);
+        break;
+    }
+    case Slope_48:
+    {
+        *rightLowCut.get<0>().coefficients = *cutCoefficients[0]; //get first filter and assign to first element cut coeefficients
+        rightLowCut.setBypassed<0>(false);
+        *rightLowCut.get<1>().coefficients = *cutCoefficients[1]; //get first filter and assign to first element cut coeefficients
+        rightLowCut.setBypassed<1>(false);
+        *rightLowCut.get<2>().coefficients = *cutCoefficients[2]; //get first filter and assign to first element cut coeefficients
+        rightLowCut.setBypassed<2>(false);
+        *rightLowCut.get<3>().coefficients = *cutCoefficients[3]; //get first filter and assign to first element cut coeefficients
+        rightLowCut.setBypassed<3>(false);
+        break;
+    }
+    } //switch
+
 
     //create audio block which wraps buffer
     juce::dsp::AudioBlock<float> block(buffer);
