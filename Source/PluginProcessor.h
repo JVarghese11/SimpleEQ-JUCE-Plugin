@@ -26,6 +26,9 @@ struct ChainSettings
     Slope lowCutSlope{Slope::Slope_12}, highCutSlope{ Slope::Slope_12};
 };
 
+
+ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts);
+
 //==============================================================================
 /**
 */
@@ -100,6 +103,65 @@ private:
         HighCut
     };
     
+    //refactoring the DSP
+    void updatePeakFilter(const ChainSettings& chainSettings);
+    using Coefficients = Filter::CoefficientsPtr;
+    static void updateCoefficients(Coefficients& old, const Coefficients& replacements);
+
+    template<typename ChainType, typename CoefficientType>
+    void updateCutFilter(ChainType& leftLowCut, 
+                        const CoefficientType& cutCoefficients,
+//                      const ChainSettings& chainSettings, 
+                        const Slope& lowCutSlope)
+    {
+      
+        leftLowCut.template setBypassed<0>(true);
+        leftLowCut.template setBypassed<1>(true);
+        leftLowCut.template setBypassed<2>(true);
+        leftLowCut.template setBypassed<3>(true);
+
+        //switch (chainSettings.lowCutSlope)
+        switch (lowCutSlope)
+        {
+        case Slope_12: //order of 2 is 1 coeffcient obj 
+        {
+            *leftLowCut.template get<0>().coefficients = *cutCoefficients[0]; //get first filter and assign to first element cut coeefficients
+            leftLowCut.template setBypassed<0>(false);
+            break;
+        }
+        case Slope_24:
+        {
+            *leftLowCut.template get<0>().coefficients = *cutCoefficients[0]; //get first filter and assign to first element cut coeefficients
+            leftLowCut.template setBypassed<0>(false);
+            *leftLowCut.template get<1>().coefficients = *cutCoefficients[1]; //get first filter and assign to first element cut coeefficients
+            leftLowCut.template setBypassed<1>(false);
+            break;
+        }
+        case Slope_36:
+        {
+            *leftLowCut.template get<0>().coefficients = *cutCoefficients[0]; //get first filter and assign to first element cut coeefficients
+            leftLowCut.template setBypassed<0>(false);
+            *leftLowCut.template get<1>().coefficients = *cutCoefficients[1]; //get first filter and assign to first element cut coeefficients
+            leftLowCut.template setBypassed<1>(false);
+            *leftLowCut.template get<2>().coefficients = *cutCoefficients[2]; //get first filter and assign to first element cut coeefficients
+            leftLowCut.template setBypassed<2>(false);
+            break;
+        }
+        case Slope_48:
+        {
+            *leftLowCut.template get<0>().coefficients = *cutCoefficients[0]; //get first filter and assign to first element cut coeefficients
+            leftLowCut.template setBypassed<0>(false);
+            *leftLowCut.template get<1>().coefficients = *cutCoefficients[1]; //get first filter and assign to first element cut coeefficients
+            leftLowCut.template setBypassed<1>(false);
+            *leftLowCut.template get<2>().coefficients = *cutCoefficients[2]; //get first filter and assign to first element cut coeefficients
+            leftLowCut.template setBypassed<2>(false);
+            *leftLowCut.template get<3>().coefficients = *cutCoefficients[3]; //get first filter and assign to first element cut coeefficients
+            leftLowCut.template setBypassed<3>(false);
+            break;
+        }
+
+        } //switch
+    }
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SimpleEQAudioProcessor)
 };
